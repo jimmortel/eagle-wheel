@@ -1,1 +1,10 @@
-
+{
+  "version": "v2",
+  "name": "Eagle Wheel",
+  "iconUrl": "https://eagle-social-proof.vercel.app/icon.png",
+  "homeUrl": "https://eagle-wheel.vercel.app",
+  "imageUrl": "https://eagle-social-proof.vercel.app/image.png",
+  "buttonTitle": "Lancer Eagle Wheel",
+  "splashImageUrl": "https://eagle-social-proof.vercel.app/splash.png",
+  "splashBackgroundColor": "#0a0e17"
+}
