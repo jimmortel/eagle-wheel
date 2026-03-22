@@ -16,37 +16,28 @@
     <h1 class="text-3xl font-bold mb-6 text-blue-500">Eagle Wheel 🎡</h1>
 
     <div class="relative w-72 h-72 mb-8">
-        <div id="pointer" class="absolute -top-4 left-1/2 -translateX-1/2 w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-red-600 z-10"></div>
-        <div id="wheel" class="wheel-container w-full h-full rounded-full border-4 border-blue-600 relative overflow-hidden bg-blue-900">
-            </div>
+        <div id="pointer" class="absolute -top-4 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-red-600 z-10"></div>
+        <div id="wheel" class="wheel-container w-full h-full rounded-full border-4 border-blue-600 relative overflow-hidden bg-blue-900"></div>
     </div>
 
     <div id="status" class="text-xl font-semibold mb-4 text-yellow-400 h-8"></div>
 
     <div class="flex flex-col gap-3 w-full max-w-xs">
-        <button id="spinBtn" class="bg-blue-600 hover:bg-blue-700 py-3 rounded-full font-bold transition shadow-lg shadow-blue-900/50">
-            🌀 TOUR GRATUIT
-        </button>
-        <button id="shareBtn" class="hidden bg-purple-600 hover:bg-purple-700 py-3 rounded-full font-bold transition">
-            📢 PARTAGER MON GAIN
-        </button>
-        <button id="payBtn" class="hidden border-2 border-blue-500 py-3 rounded-full font-bold text-blue-400">
-            🎟️ REJOUER (0.01 SOL)
-        </button>
+        <button id="spinBtn" class="bg-blue-600 hover:bg-blue-700 py-3 rounded-full font-bold transition shadow-lg shadow-blue-900/50">🌀 TOUR GRATUIT</button>
+        <button id="shareBtn" class="hidden bg-purple-600 hover:bg-purple-700 py-3 rounded-full font-bold transition">📢 PARTAGER MON GAIN</button>
+        <button id="payBtn" class="hidden border-2 border-blue-500 py-3 rounded-full font-bold text-blue-400">🎟️ REJOUER (0.01 SOL)</button>
     </div>
 
     <script>
-        const sdk = window.farcaster?.sdk;
         const wheel = document.getElementById('wheel');
         const spinBtn = document.getElementById('spinBtn');
         const shareBtn = document.getElementById('shareBtn');
         const payBtn = document.getElementById('payBtn');
         const status = document.getElementById('status');
 
-        const rewards = ["Multiplicateur x2", "Badge Rare", "Choix Couleur", "Streak Saver", "10 Points", "Bonus Sky"];
+        const rewards = ["Multi x2", "Badge Rare", "Couleur", "Saver", "10 Pts", "Sky Bonus"];
         const colors = ["#1e3a8a", "#1d4ed8", "#3b82f6", "#1e40af", "#2563eb", "#60a5fa"];
 
-        // Création visuelle de la roue
         rewards.forEach((text, i) => {
             const el = document.createElement('div');
             el.className = 'wheel-segment';
@@ -58,42 +49,38 @@
         let rotation = 0;
         let isSpinning = false;
 
-        async function doSpin(type) {
+        function doSpin() {
             if (isSpinning) return;
             isSpinning = true;
-            status.innerText = "Bonne chance...";
-            
             const extraDegrees = Math.floor(Math.random() * 360) + 1800; 
             rotation += extraDegrees;
             wheel.style.transform = `rotate(${rotation}deg)`;
-
             setTimeout(() => {
-                const actualDegree = rotation % 360;
-                const index = Math.floor((360 - actualDegree) / 60) % 6;
-                const win = rewards[index];
-                
-                status.innerText = "Gagné : " + win + " !";
+                const index = Math.floor((360 - (rotation % 360)) / 60) % 6;
+                status.innerText = "Gagné : " + rewards[index] + " !";
                 isSpinning = false;
                 shareBtn.classList.remove('hidden');
                 payBtn.classList.remove('hidden');
-
-                // Configuration du bouton Share
                 shareBtn.onclick = () => {
-                    const text = `J'ai gagné [${win}] sur Eagle Wheel ! 🎡🦅\nViens tenter ta chance :`;
-                    const url = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=https://eagle-wheel.vercel.app`;
-                    window.open(url);
+                    const t = encodeURIComponent(`J'ai gagné [${rewards[index]}] sur Eagle Wheel ! 🎡🦅`);
+                    window.open(`https://warpcast.com/~/compose?text=${t}&embeds[]=https://eagle-wheel.vercel.app`);
                 };
             }, 4100);
         }
 
-        spinBtn.onclick = () => {
-            spinBtn.classList.add('hidden');
-            doSpin('free');
-        };
+        spinBtn.onclick = () => { spinBtn.classList.add('hidden'); doSpin(); };
 
         payBtn.onclick = async () => {
             try {
-                const result = await sdk.actions.sendSolanaTransaction({
+                const result = await window.farcaster?.sdk?.actions.sendSolanaTransaction({
                     recipient: "GU5dNvMQKoUiVJvZ5HUgrv3CxtrR5ujxfHK2HPT6Z6bV",
                     amount: "10000000"
                 });
+                if (result) { doSpin(); }
+            } catch (e) { status.innerText = "Paiement annulé."; }
+        };
+
+        if (window.farcaster?.sdk) { window.farcaster.sdk.actions.ready(); }
+    </script>
+</body>
+</html>
