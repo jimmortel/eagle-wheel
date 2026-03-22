@@ -91,16 +91,9 @@
             doSpin('free');
         };
 
-        payBtn.onclick = () => {
-            // Ici l'utilisateur paie vers ton adresse GU5d...
-            alert("Paiement de 0.01 SOL vers GU5d...6bV");
-            doSpin('paid');
-        };
-
-        // Init SDK
-        if (sdk) {
-            sdk.actions.ready();
-        }
-    </script>
-</body>
-</html>
+        payBtn.onclick = async () => {
+            try {
+                const result = await sdk.actions.sendSolanaTransaction({
+                    recipient: "GU5dNvMQKoUiVJvZ5HUgrv3CxtrR5ujxfHK2HPT6Z6bV",
+                    amount: "10000000"
+                });
