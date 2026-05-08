@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -18,31 +18,32 @@
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-height-screen p-4">
-    <h1 class="text-2xl font-black tracking-tighter text-blue-400 mb-2 uppercase">Eagle Wheel 🎡</h1>
-    <p id="status" class="text-xs text-gray-400 mb-4 text-center">1er tour gratuit • Suivants: 1 $TALON</p>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <h1 class="text-2xl font-black tracking-tighter text-blue-400 mb-2 uppercase text-center">Eagle Wheel 🎡</h1>
+    <p id="status" class="text-[10px] text-gray-400 mb-4 text-center uppercase tracking-widest">1st spin free • Next: 1 $TALON</p>
 
     <div class="wheel-container">
         <div class="pointer"></div>
         <canvas id="canvas" width="500" height="500"></canvas>
     </div>
-        <div class="w-full max-w-xs space-y-3 mt-6">
+
+    <div class="w-full max-w-xs space-y-3 mt-6">
         <button id="spinBtn" onclick="handleSpin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-sm">
-            Tenter ma chance 🚀
+            Try your luck 🚀
         </button>
         
         <div id="paymentNotice" class="hidden glass p-3 rounded-xl text-[10px] text-amber-500 text-center border border-amber-500/30">
-            SOLDE GRATUIT ÉPUISÉ <br> Rejouer pour 1 $TALON ?
+            FREE SPIN USED <br> Spin again for 1 $TALON?
         </div>
 
         <button onclick="shareResult()" class="w-full bg-white/10 text-white/50 py-2 rounded-xl text-[10px] uppercase font-bold">
-            Partager mon gain
+            Share my reward
         </button>
-        </div>
-            <script>
+    </div>
+        <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const sectors = ["JACKPOT 🦅", "PERDU 💀", "10 $TALON", "FREE SPIN", "PERDU 💀", "5 $TALON", "BONUS 🎁", "PERDU 💀"];
+        const sectors = ["JACKPOT 🦅", "LOSE 💀", "10 $TALON", "FREE SPIN", "LOSE 💀", "5 $TALON", "BONUS 🎁", "LOSE 💀"];
         const colors = ["#f59e0b", "#1e293b", "#3b82f6", "#10b981", "#1e293b", "#6366f1", "#ec4899", "#1e293b"];
         
         let freeSpinUsed = false;
@@ -67,7 +68,7 @@
             if (!freeSpinUsed) {
                 startSpin(); freeSpinUsed = true;
                 document.getElementById('paymentNotice').classList.remove('hidden');
-                document.getElementById('status').innerText = "Tour gratuit utilisé !";
+                document.getElementById('status').innerText = "Free spin used!";
             } else {
                 await payToPlay();
             }
@@ -79,30 +80,31 @@
                     await window.farcaster.sdk.actions.eth_sendTransaction({
                         params: { 
                             to: "0x872b8348dF29fE38D331CBe9048a60424578fA83", 
-                            value: "10000000000000000" // 1 $TALON (unité Base)
+                            value: "10000000000000000" // 1 $TALON on Base
                         } 
                     });
+                    document.getElementById('status').innerText = "Payment confirmed! Good luck 🎡";
                     startSpin();
                 } else {
-                    alert("Mode Test : Paiement de 1 $TALON simulé");
+                    alert("Test Mode: 1 $TALON simulated");
                     startSpin();
                 }
-            } catch (e) { console.error("Paiement annulé", e); }
+            } catch (e) { console.error("Payment cancelled", e); }
         }
 
         function startSpin() {
             isSpinning = true;
-            const extraDegrees = Math.floor(Math.random() * 360) + 1440; // 4 tours min
+            const extraDegrees = Math.floor(Math.random() * 360) + 1440;
             currentRotation += extraDegrees;
             canvas.style.transform = `rotate(${currentRotation}deg)`;
             setTimeout(() => {
                 isSpinning = false;
-                document.getElementById('status').innerText = "Bravo ! Rejoue pour 1 $TALON";
+                document.getElementById('status').innerText = "Nice! Spin again for 1 $TALON";
             }, 4000);
         }
 
         function shareResult() {
-            const text = encodeURIComponent("J'ai fait tourner la TALON Wheel ! 🎡 Viens tenter ta chance sur l'Arcade : @eagle-pi");
+            const text = encodeURIComponent("I just spun the TALON Wheel! 🎡 Try your luck at the Arcade: @eagle-pi");
             const shareUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${window.location.href}`;
             if (window.farcaster?.sdk) window.farcaster.sdk.actions.openUrl(shareUrl);
             else window.open(shareUrl, '_blank');
