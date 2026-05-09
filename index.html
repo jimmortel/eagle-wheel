@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TALON WHEEL 🎡</title>
-    <script src="https://unpkg.com/@farcaster/frame-sdk/dist/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/index.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="access.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #0f172a; color: white; font-family: sans-serif; overflow: hidden; }
@@ -16,9 +18,16 @@
             border-right: 15px solid transparent; border-top: 30px solid #f59e0b; z-index: 10;
         }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div id="overlay">
+        <button onclick="handleEagleStart()" class="bg-blue-600 border-2 border-white text-white px-8 py-4 rounded-2xl font-black uppercase shadow-2xl">
+            Vérifier Accès Roue 🎡
+        </button>
+    </div>
+
     <h1 class="text-2xl font-black tracking-tighter text-blue-400 mb-2 uppercase text-center">Eagle Wheel 🎡</h1>
     <p id="status" class="text-[10px] text-gray-400 mb-4 text-center uppercase tracking-widest">1st spin free • Next: 1 $TALON</p>
 
@@ -29,27 +38,32 @@
 
     <div class="w-full max-w-xs space-y-3 mt-6">
         <button id="spinBtn" onclick="handleSpin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-sm">
-            Try your luck 🚀
+            Tente ta chance 🚀
         </button>
         
         <div id="paymentNotice" class="hidden glass p-3 rounded-xl text-[10px] text-amber-500 text-center border border-amber-500/30">
-            FREE SPIN USED <br> Spin again for 1 $TALON?
+            TOUR GRATUIT ÉPUISÉ <br> Relancer pour 1 $TALON ?
         </div>
 
         <button onclick="shareResult()" class="w-full bg-white/10 text-white/50 py-2 rounded-xl text-[10px] uppercase font-bold">
-            Share my reward
+            Partager mon gain
         </button>
     </div>
         <script>
+        const SUPABASE_URL = "https://rjkyjqmydriagpiatbsr.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqa3lqcW15ZHJpYWdwaWF0YnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMzQ5MTEsImV4cCI6MjA4OTYxMDkxMX0.4-uEBo_SFqfMgPpTuDQRxTYLeUoI_ZMZlwtkBJzK_X0";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const sectors = ["JACKPOT 🦅", "LOSE 💀", "10 $TALON", "FREE SPIN", "LOSE 💀", "5 $TALON", "BONUS 🎁", "LOSE 💀"];
         const colors = ["#f59e0b", "#1e293b", "#3b82f6", "#10b981", "#1e293b", "#6366f1", "#ec4899", "#1e293b"];
         
-        let freeSpinUsed = false;
         let isSpinning = false;
         let currentRotation = 0;
+        let lastResult = "";
 
+        // Dessin de la roue
         function drawWheel() {
             const arc = (2 * Math.PI) / sectors.length;
             for (let i = 0; i < sectors.length; i++) {
@@ -63,33 +77,30 @@
             }
         }
 
-        async function handleSpin() {
-            if (isSpinning) return;
-            if (!freeSpinUsed) {
-                startSpin(); freeSpinUsed = true;
-                document.getElementById('paymentNotice').classList.remove('hidden');
-                document.getElementById('status').innerText = "Free spin used!";
-            } else {
-                await payToPlay();
+        // Démarrage initial
+        async function handleEagleStart() {
+            const access = await checkGameAccess('wheel');
+            if(access) {
+                document.getElementById('overlay').style.display = 'none';
+                drawWheel();
             }
         }
 
-        async function payToPlay() {
-            try {
-                if (window.farcaster && window.farcaster.sdk) {
-                    await window.farcaster.sdk.actions.eth_sendTransaction({
-                        params: { 
-                            to: "0x872b8348dF29fE38D331CBe9048a60424578fA83", 
-                            value: "10000000000000000" // 1 $TALON on Base
-                        } 
-                    });
-                    document.getElementById('status').innerText = "Payment confirmed! Good luck 🎡";
-                    startSpin();
-                } else {
-                    alert("Test Mode: 1 $TALON simulated");
-                    startSpin();
-                }
-            } catch (e) { console.error("Payment cancelled", e); }
+        // Logique de spin
+        async function handleSpin() {
+            if (isSpinning) return;
+            
+            // On vérifie si on doit payer (1 $TALON pour la roue)
+            if (localStorage.getItem('free_play_wheel') === "true") {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+                const paid = await executeTalonPayment(signer, 1); // Prix réduit pour la roue
+                if (!paid) return;
+            }
+
+            startSpin();
+            localStorage.setItem('free_play_wheel', "true"); // Marque le tour gratuit comme utilisé
+            document.getElementById('paymentNotice').classList.remove('hidden');
         }
 
         function startSpin() {
@@ -97,24 +108,36 @@
             const extraDegrees = Math.floor(Math.random() * 360) + 1440;
             currentRotation += extraDegrees;
             canvas.style.transform = `rotate(${currentRotation}deg)`;
+            
             setTimeout(() => {
                 isSpinning = false;
-                document.getElementById('status').innerText = "Nice! Spin again for 1 $TALON";
+                const actualDeg = currentRotation % 360;
+                const sectorIndex = Math.floor((360 - actualDeg) / (360 / sectors.length)) % sectors.length;
+                lastResult = sectors[sectorIndex];
+                
+                document.getElementById('status').innerText = `RÉSULTAT : ${lastResult} !`;
+                saveResult(lastResult);
             }, 4000);
         }
 
-        function shareResult() {
-            const text = encodeURIComponent("I just spun the TALON Wheel! 🎡 Try your luck at the Arcade: @eagle-pi");
-            const shareUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${window.location.href}`;
-            if (window.farcaster?.sdk) window.farcaster.sdk.actions.openUrl(shareUrl);
-            else window.open(shareUrl, '_blank');
+        async function saveResult(res) {
+            const username = prompt(`🦅 ${res} ! Entre ton pseudo pour l'historique :`);
+            if (username) {
+                await supabaseClient.from('leaderboard').insert([{ 
+                    username: username, 
+                    score: res.includes('$TALON') ? parseInt(res) : 0, 
+                    game: 'wheel' 
+                }]);
+            }
         }
 
-        async function init() {
-            try { if (window.farcaster?.sdk) await window.farcaster.sdk.actions.ready(); } catch(e) {}
-            drawWheel();
+        function shareResult() {
+            const text = encodeURIComponent(`J'ai obtenu ${lastResult} sur l'Eagle Wheel ! 🎡 Tente ta chance : @eagle-pi`);
+            const shareUrl = `https://warpcast.com/~/compose?text=${text}&embeds[]=${window.location.href}`;
+            window.open(shareUrl, '_blank');
         }
-        init();
+
+        drawWheel();
     </script>
 </body>
 </html>
